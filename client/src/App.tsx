@@ -1,121 +1,194 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react'
+import type { FormEvent } from 'react'
+import { AuthFeature } from './features/auth/AuthFeature'
+import { LibraryFeature } from './features/library/LibraryFeature'
+import { ReviewFeature } from './features/reviews/ReviewFeature'
+import { readStoredAuth, persistAuth } from './hooks/authStorage'
+import { api } from './services/api'
+import type { Movie, Review } from './types/movie'
+import './index.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [favorites, setFavorites] = useState<Movie[]>([])
+  const [watchlist, setWatchlist] = useState<number[]>([])
+  const [reviews, setReviews] = useState<Review[]>([])
+  const [query, setQuery] = useState('')
+  const [activeView, setActiveView] = useState<'discover' | 'saved'>('discover')
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [notice, setNotice] = useState('')
+  const [authOpen, setAuthOpen] = useState(false)
+  const [registerMode, setRegisterMode] = useState(false)
+  const [auth, setAuth] = useState({ username: '', email: '', password: '' })
+  const [review, setReview] = useState({ rating: 5, content: '' })
+
+  const isAuthenticated = Boolean(readStoredAuth().token)
+
+  useEffect(() => {
+    void loadPopular()
+    if (isAuthenticated) {
+      void loadSaved()
+    }
+  }, [isAuthenticated])
+
+  async function loadPopular() {
+    setLoading(true)
+    try {
+      setMovies(await api.getPopularMovies())
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load movies')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function loadSaved() {
+    try {
+      const [favoriteMovies, savedWatchlist] = await Promise.all([api.getFavorites(), api.getWatchlist()])
+      setFavorites(favoriteMovies)
+      setWatchlist(savedWatchlist.map((item) => item.tmdbMovieId))
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load your library')
+    }
+  }
+
+  async function handleSearch(event: FormEvent) {
+    event.preventDefault()
+    if (!query.trim()) {
+      void loadPopular()
+      return
+    }
+
+    setLoading(true)
+    try {
+      setMovies(await api.searchMovies(query.trim()))
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Search failed')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function handleAuth(event: FormEvent) {
+    event.preventDefault()
+    try {
+      const result = registerMode
+        ? await api.register(auth.username, auth.email, auth.password)
+        : await api.login(auth.email, auth.password)
+      persistAuth(result.token, result.user.username)
+      setAuthOpen(false)
+      setNotice(`Welcome back, ${result.user.username}`)
+      await loadSaved()
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Authentication failed')
+    }
+  }
+
+  async function toggleFavorite(movie: Movie) {
+    if (!isAuthenticated) {
+      setAuthOpen(true)
+      return
+    }
+    try {
+      const result = await api.toggleFavorite(movie.id)
+      setFavorites((current) => result.favorited ? [...current, movie] : current.filter((item) => item.id !== movie.id))
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update favorites')
+    }
+  }
+
+  async function toggleWatchlist(movie: Movie) {
+    if (!isAuthenticated) {
+      setAuthOpen(true)
+      return
+    }
+    try {
+      if (watchlist.includes(movie.id)) {
+        await api.removeFromWatchlist(movie.id)
+        setWatchlist((current) => current.filter((id) => id !== movie.id))
+      } else {
+        await api.addToWatchlist(movie.id)
+        setWatchlist((current) => [...current, movie.id])
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not update watchlist')
+    }
+  }
+
+  async function openMovie(movie: Movie) {
+    setSelectedMovie(movie)
+    try {
+      setReviews(await api.getReviews(movie.id))
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not load reviews')
+    }
+  }
+
+  async function submitReview(event: FormEvent) {
+    event.preventDefault()
+    if (!selectedMovie || !isAuthenticated) {
+      setAuthOpen(true)
+      return
+    }
+    try {
+      const result = await api.createReview(selectedMovie.id, review.rating, review.content)
+      setReviews((current) => [result.data, ...current])
+      setReview({ rating: 5, content: '' })
+      setNotice('Review published')
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not publish review')
+    }
+  }
+
+  const username = readStoredAuth().username || 'Sign in'
+
+  const handleAuthFieldChange = (field: 'username' | 'email' | 'password', value: string) => {
+    setAuth((current) => ({ ...current, [field]: value }))
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <main className="app-shell">
+      <LibraryFeature
+        movies={movies}
+        favorites={favorites}
+        watchlist={watchlist}
+        loading={loading}
+        query={query}
+        activeView={activeView}
+        username={username}
+        onSearch={handleSearch}
+        onQueryChange={(value) => setQuery(value)}
+        onOpenMovie={openMovie}
+        onToggleFavorite={toggleFavorite}
+        onToggleWatchlist={toggleWatchlist}
+        onChangeView={setActiveView}
+        onOpenAuth={() => setAuthOpen(true)}
+      />
 
-      <div className="ticks"></div>
+      {notice && <button className="notice" onClick={() => setNotice('')}>{notice} <span>×</span></button>}
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      <ReviewFeature
+        selectedMovie={selectedMovie}
+        reviews={reviews}
+        isAuthenticated={isAuthenticated}
+        review={review}
+        onClose={() => setSelectedMovie(null)}
+        onRatingChange={(value) => setReview((current) => ({ ...current, rating: value }))}
+        onReviewChange={(value) => setReview((current) => ({ ...current, content: value }))}
+        onSubmitReview={submitReview}
+      />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      <AuthFeature
+        authOpen={authOpen}
+        registerMode={registerMode}
+        auth={auth}
+        onClose={() => setAuthOpen(false)}
+        onSubmit={handleAuth}
+        onToggleMode={() => setRegisterMode((current) => !current)}
+        onChange={handleAuthFieldChange}
+      />
+    </main>
   )
 }
 
