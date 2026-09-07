@@ -1,11 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const isCI = Boolean((globalThis as { process?: { env?: { CI?: string } } }).process?.env?.CI);
+
 export default defineConfig({
   testDir: './e2e/tests',
   fullyParallel: false,
-  forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  forbidOnly: isCI,
+  retries: isCI ? 2 : 0,
+  workers: isCI ? 1 : undefined,
   reporter: 'list',
   use: {
     baseURL: 'http://127.0.0.1:4173',
@@ -15,7 +17,7 @@ export default defineConfig({
   webServer: {
     command: 'npm --prefix client run dev -- --host 127.0.0.1 --port 4173',
     url: 'http://127.0.0.1:4173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !isCI,
     timeout: 120000,
   },
   projects: [
