@@ -1,15 +1,21 @@
 export interface User { 
-    id: string;
+    id: number;
     username: string; 
     email: string; 
-    password_hash: string; 
+    passwordHash: string; 
     role: UserRole; 
-    created_at: Date; 
-    updated_at: Date;
+    createdAt: Date; 
+    updatedAt: Date;
 }
 
 export type UserRole = 'user' | 'admin';
 
-export type CreateUserInput = Omit<User, 'id' | 'createdAt' | 'updatedAt'>; 
+export interface CreateUserInput {
+    username: string;
+    email: string;
+    password: string;
+}
 
-export type UserDTO = Omit<User, 'password'>;
+export type UserModelInput = Omit<User, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type UserDTO = Omit<User, 'passwordHash'>;

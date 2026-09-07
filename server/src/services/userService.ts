@@ -1,9 +1,9 @@
-import { userModel } from '../models/userModel'; 
-import { CreateUserInput, User, UserDTO } from '../types/user'; 
+import { userModel } from '../models/userModel.js'; 
+import { UserModelInput, User, UserDTO } from '../types/user.js'; 
 
-export const userServive = { 
+export const userService = { 
 
-    async createUser(data: CreateUserInput): Promise<User> { 
+    async createUser(data: UserModelInput): Promise<User> { 
 
         const existingUser = await userModel.findByEmail(data.email); 
 

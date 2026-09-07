@@ -1,8 +1,15 @@
-export interface Review { 
-    id: number; 
-    user_id: number; 
-    tmdb_movie_id: number; 
-    content: string; 
-    created_at: Date; 
-    updated_at: Date; 
+export interface Review {
+    id: number;
+    userId: number;
+    tmdbMovieId: number;
+    rating: number;
+    content: string;
+    createdAt: Date;
+    updatedAt: Date;
+}
+
+export interface CreateReviewInput {
+    tmdbMovieId: number;
+    rating: number;
+    content: string;
 }

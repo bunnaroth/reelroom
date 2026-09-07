@@ -1,6 +1,10 @@
-export interface Favorite { 
-    id: number; 
-    user_id: number; 
-    tmdb_movie_id: number; 
-    created_at: Date;
+export interface FavoriteItem {
+    id: number;
+    userId: number;
+    tmdbMovieId: number;
+    createdAt: Date;
+}
+
+export interface ToggleFavoriteInput {
+    tmdbMovieId: number;
 }
