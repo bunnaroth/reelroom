@@ -74,10 +74,13 @@ function App() {
     event.preventDefault()
     try {
       if (registerMode) {
-        await api.register(auth.username, auth.email, auth.password)
+        const result = await api.register(auth.username, auth.email, auth.password)
+        persistAuth(result.token, result.user.username)
         setAuth((current) => ({ ...current, password: '' }))
         setRegisterMode(false)
-        setNotice('Account created. Sign in to continue.')
+        setAuthOpen(false)
+        setNotice(`Welcome back, ${result.user.username}`)
+        await loadSaved()
         return
       }
 
