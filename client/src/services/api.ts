@@ -1,4 +1,4 @@
-import type { AuthResponse, Movie, Review, WatchlistItem } from '../types/movie'
+import type { AuthResponse, Movie, Profile, Review, WatchlistItem } from '../types/movie'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -34,6 +34,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
+  getProfile: () => request<{ user: Profile }>('/auth/profile'),
   getFavorites: () => request<Movie[]>('/favorites'),
   toggleFavorite: (tmdbMovieId: number) =>
     request<{ favorited: boolean }>('/favorites/toggle', {

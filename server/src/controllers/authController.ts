@@ -45,5 +45,19 @@ export const authController = {
 
             next(error);
         }
+    },
+
+    async profile(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            if (!req.user) {
+                res.status(401).json({ error: 'Authentication required' });
+                return;
+            }
+
+            const user = await authService.getProfile(req.user.id);
+            res.status(200).json({ user });
+        } catch (error) {
+            next(error);
+        }
     }
 }

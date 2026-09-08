@@ -31,7 +31,6 @@ export function AuthDialog({
     <div className="dialog-backdrop" onClick={onClose}>
       <section className="auth-dialog" onClick={(event) => event.stopPropagation()}>
         <button className="close-button" onClick={onClose} aria-label="Close authentication">×</button>
-        <p className="eyebrow">YOUR SCREENING ROOM</p>
         <h2>{registerMode ? 'Create your account' : 'Welcome back'}</h2>
         <form onSubmit={onSubmit}>
           {registerMode && (

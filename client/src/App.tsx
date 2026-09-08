@@ -73,9 +73,15 @@ function App() {
   async function handleAuth(event: FormEvent) {
     event.preventDefault()
     try {
-      const result = registerMode
-        ? await api.register(auth.username, auth.email, auth.password)
-        : await api.login(auth.email, auth.password)
+      if (registerMode) {
+        await api.register(auth.username, auth.email, auth.password)
+        setAuth((current) => ({ ...current, password: '' }))
+        setRegisterMode(false)
+        setNotice('Account created. Sign in to continue.')
+        return
+      }
+
+      const result = await api.login(auth.email, auth.password)
       persistAuth(result.token, result.user.username)
       setAuthOpen(false)
       setNotice(`Welcome back, ${result.user.username}`)

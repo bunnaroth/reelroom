@@ -36,3 +36,12 @@ export interface AuthResponse {
   }
   token: string
 }
+
+export interface Profile {
+  id: number
+  username: string
+  email: string
+  role: string
+  createdAt: string
+  updatedAt: string
+}

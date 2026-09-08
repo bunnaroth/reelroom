@@ -28,7 +28,11 @@ export const authService = {
 
         const token = this.generateToken(userDto); 
 
-        return { user: userDto, token};
+        return { user: userDto, token}; 
+    },
+
+    async getProfile(id: number): Promise<UserDTO> {
+        return userService.getUserById(id);
     }, 
 
     async login(email: string, passwordPlain: string): Promise<AuthResponse> {

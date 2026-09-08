@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom'
 import type { CSSProperties, FormEvent } from 'react'
 import type { Movie } from '../../types/movie'
 
@@ -34,6 +35,7 @@ export function MovieFeature({
   onChangeView,
   onOpenAuth,
 }: MovieFeatureProps) {
+  const navigate = useNavigate()
   const visibleMovies = activeView === 'saved' ? favorites : movies
 
   return (
@@ -44,7 +46,9 @@ export function MovieFeature({
           <button className={activeView === 'discover' ? 'active' : ''} onClick={() => onChangeView('discover')}>Discover</button>
           <button className={activeView === 'saved' ? 'active' : ''} onClick={() => onChangeView('saved')}>My library</button>
         </nav>
-        <button className="account-button" onClick={onOpenAuth}>{username} <span>↗</span></button>
+        <button className="account-button" onClick={() => username === 'Sign in' ? onOpenAuth() : navigate('/profile')}>
+          {username === 'Sign in' ? username : <><span className="avatar">{username.charAt(0).toUpperCase()}</span>{username}</>}
+        </button>
       </header>
 
       <section className="hero-band">
@@ -68,7 +72,7 @@ export function MovieFeature({
           <span className="count">{visibleMovies.length.toString().padStart(2, '0')} films</span>
         </div>
         {loading ? (
-          <div className="empty-state">Loading the programme...</div>
+          <div className="empty-state">Loading...</div>
         ) : visibleMovies.length === 0 ? (
           <div className="empty-state">Nothing here yet. Search for a film or save one from Discover.</div>
         ) : (
