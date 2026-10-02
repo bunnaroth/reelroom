@@ -1,12 +1,13 @@
 import { watchlistModel } from '../models/watchlistModel.js';
 import { tmdbService } from './tmdbService.js';
 import { WatchlistItem } from '../types/watchlist.js';
+import type { MediaType } from '../types/movie.js';
 
 export const watchlistService = {
-    async addToWatchlist(userId: number, tmdbMovieId: number): Promise<WatchlistItem> {
+    async addToWatchlist(userId: number, tmdbMovieId: number, mediaType: MediaType = 'movie'): Promise<WatchlistItem> {
         validateIds(userId, tmdbMovieId);
-        await tmdbService.getMovieDetails(tmdbMovieId);
-        return watchlistModel.add(userId, tmdbMovieId);
+        await tmdbService.getMediaDetails(tmdbMovieId, mediaType);
+        return watchlistModel.add(userId, tmdbMovieId, mediaType);
     },
 
     async getUserWatchlistIDs(userId: number): Promise<WatchlistItem[]> {
@@ -14,12 +15,16 @@ export const watchlistService = {
             throw new Error('A valid user ID is required');
         }
 
-        return watchlistModel.findByUser(userId);
+        const items = await watchlistModel.findByUser(userId);
+        const movies = await Promise.all(items.map((item) =>
+            tmdbService.getMediaDetails(item.tmdbMovieId, item.mediaType)));
+
+        return items.map((item, index) => ({ ...item, movie: movies[index] }));
     },
 
-    async removeFromWatchlist(userId: number, tmdbMovieId: number): Promise<boolean> {
+    async removeFromWatchlist(userId: number, tmdbMovieId: number, mediaType: MediaType = 'movie'): Promise<boolean> {
         validateIds(userId, tmdbMovieId);
-        return watchlistModel.remove(userId, tmdbMovieId);
+        return watchlistModel.remove(userId, tmdbMovieId, mediaType);
     }
 };
 

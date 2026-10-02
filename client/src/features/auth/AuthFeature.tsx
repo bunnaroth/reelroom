@@ -9,6 +9,7 @@ interface AuthFeatureProps {
     email: string
     password: string
   }
+  message?: string
   onClose: () => void
   onSubmit: (event: FormEvent) => void
   onToggleMode: () => void

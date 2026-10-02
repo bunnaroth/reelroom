@@ -9,12 +9,11 @@ export const globalErrorHandler = (
     console.error('[Internal Error Log]:', err?.stack || err?.message || err);
 
     const statusCode = Number.isInteger(err?.statusCode) ? err.statusCode : 500;
-    const clientMessage = statusCode === 500
-        ? 'A generic internal application error occurred.'
-        : err?.message || 'An error occurred.';
-
+    const message = err instanceof Error ? err.message : 'Internal server error';
     const payload: Record<string, unknown> = {
-        error: clientMessage,
+        error: statusCode >= 500 && process.env.NODE_ENV !== 'development'
+            ? 'Internal server error'
+            : message,
     };
 
     if (process.env.NODE_ENV === 'development') {

@@ -1,56 +1,39 @@
-import { useNavigate } from 'react-router-dom'
-import type { CSSProperties, FormEvent } from 'react'
-import type { Movie } from '../../types/movie'
+import type { FormEvent } from 'react'
+import { MovieCard } from '../../components/MovieCard'
+import type { Movie, WatchlistItem } from '../../types/movie'
 
 interface MovieFeatureProps {
   movies: Movie[]
-  favorites: Movie[]
-  watchlist: number[]
+  watchlist: WatchlistItem[]
   loading: boolean
   query: string
-  activeView: 'discover' | 'saved'
-  username: string
+  activeView: 'discover' | 'watchlist'
   onSearch: (event: FormEvent) => void
   onQueryChange: (value: string) => void
   onOpenMovie: (movie: Movie) => void
-  onToggleFavorite: (movie: Movie) => void
   onToggleWatchlist: (movie: Movie) => void
-  onChangeView: (view: 'discover' | 'saved') => void
-  onOpenAuth: () => void
 }
 
 export function MovieFeature({
   movies,
-  favorites,
   watchlist,
   loading,
   query,
   activeView,
-  username,
   onSearch,
   onQueryChange,
   onOpenMovie,
-  onToggleFavorite,
   onToggleWatchlist,
-  onChangeView,
-  onOpenAuth,
 }: MovieFeatureProps) {
-  const navigate = useNavigate()
-  const visibleMovies = activeView === 'saved' ? favorites : movies
+  const visibleMovies = activeView === 'watchlist'
+    ? watchlist.flatMap((item) => item.movie ? [item.movie] : [])
+      .filter((movie, index, watchlistMovies) =>
+        watchlistMovies.findIndex((watchlistMovie) =>
+          watchlistMovie.id === movie.id && (watchlistMovie.mediaType || 'movie') === (movie.mediaType || 'movie')) === index)
+    : movies
 
   return (
     <>
-      <header className="topbar">
-        <a className="brand" href="/">REEL<span>ROOM</span></a>
-        <nav className="nav-tabs" aria-label="Main navigation">
-          <button className={activeView === 'discover' ? 'active' : ''} onClick={() => onChangeView('discover')}>Discover</button>
-          <button className={activeView === 'saved' ? 'active' : ''} onClick={() => onChangeView('saved')}>My library</button>
-        </nav>
-        <button className="account-button" onClick={() => username === 'Sign in' ? onOpenAuth() : navigate('/profile')}>
-          {username === 'Sign in' ? username : <><span className="avatar">{username.charAt(0).toUpperCase()}</span>{username}</>}
-        </button>
-      </header>
-
       <section className="hero-band">
         <div className="hero-copy">
           <p className="eyebrow">THE NIGHTLY SCREENING</p>
@@ -58,7 +41,7 @@ export function MovieFeature({
           <p className="hero-description">A considered collection of films worth your evening. Search the catalogue, save what calls to you, and leave a note for the next viewer.</p>
         </div>
         <form className="search-form" onSubmit={onSearch}>
-          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search films, directors, moods..." aria-label="Search movies" />
+          <input value={query} onChange={(event) => onQueryChange(event.target.value)} placeholder="Search films..." aria-label="Search movies" />
           <button type="submit" aria-label="Search">⌕</button>
         </form>
       </section>
@@ -66,42 +49,24 @@ export function MovieFeature({
       <section className="catalogue">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{activeView === 'saved' ? 'YOUR COLLECTION' : query ? 'SEARCH RESULTS' : 'CURATED FOR YOU'}</p>
-            <h2>{activeView === 'saved' ? 'Saved films' : query ? `Films matching “${query}”` : 'Popular right now'}</h2>
+            <h2>{activeView === 'watchlist' ? 'My Watchlist' : query ? `Films matching “${query}”` : 'Popular right now'}</h2>
           </div>
-          <span className="count">{visibleMovies.length.toString().padStart(2, '0')} films</span>
         </div>
         {loading ? (
           <div className="empty-state">Loading...</div>
         ) : visibleMovies.length === 0 ? (
-          <div className="empty-state">Nothing here yet. Search for a film or save one from Discover.</div>
+          <div className="empty-state">Your watchlist is empty.</div>
         ) : (
           <div className="movie-grid">
             {visibleMovies.map((movie, index) => (
-              <article className="movie-card" key={movie.id} style={{ '--delay': `${index * 45}ms` } as CSSProperties}>
-                <button className="poster-button" onClick={() => onOpenMovie(movie)} aria-label={`Open ${movie.title}`}>
-                  <div className="poster-wrap">
-                    {movie.posterPath ? <img src={movie.posterPath} alt={`${movie.title} poster`} /> : <div className="poster-placeholder">{movie.title}</div>}
-                    <span className="movie-index">{String(index + 1).padStart(2, '0')}</span>
-                  </div>
-                </button>
-                <div className="movie-meta">
-                  <div>
-                    <h3>{movie.title}</h3>
-                    <p>{movie.releaseDate?.slice(0, 4) || 'Unknown'} <span>·</span> {movie.voteAverage.toFixed(1)} rating</p>
-                  </div>
-                  <button
-                    className={favorites.some((item) => item.id === movie.id) ? 'icon-button saved' : 'icon-button'}
-                    onClick={() => onToggleFavorite(movie)}
-                    aria-label={`Favorite ${movie.title}`}
-                  >
-                    ♥
-                  </button>
-                </div>
-                <button className={watchlist.includes(movie.id) ? 'watch-button added' : 'watch-button'} onClick={() => onToggleWatchlist(movie)}>
-                  {watchlist.includes(movie.id) ? 'In watchlist' : '+ Watchlist'}
-                </button>
-              </article>
+              <MovieCard
+                key={movie.id}
+                movie={movie}
+                index={index}
+                isWatchlisted={watchlist.some((item) => item.tmdbMovieId === movie.id && (item.mediaType || 'movie') === (movie.mediaType || 'movie'))}
+                onOpen={onOpenMovie}
+                onToggleWatchlist={onToggleWatchlist}
+              />
             ))}
           </div>
         )}
