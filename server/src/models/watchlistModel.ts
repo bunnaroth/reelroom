@@ -2,21 +2,20 @@ import { pool } from '../config/db.js';
 import { WatchlistItem } from '../types/watchlist.js';
 
 export const watchlistModel = {
-    async add(userId: number, tmdbMovieId: number, mediaType: WatchlistItem['mediaType']): Promise<WatchlistItem> {
+    async add(userId: number, tmdbMovieId: number): Promise<WatchlistItem> {
         const text = `
-            INSERT INTO watchlists (user_id, tmdb_movie_id, media_type)
-            VALUES ($1, $2, $3)
-            ON CONFLICT (user_id, tmdb_movie_id, media_type)
-            DO UPDATE SET tmdb_movie_id = EXCLUDED.tmdb_movie_id
-            RETURNING id, user_id AS "userId", tmdb_movie_id AS "tmdbMovieId", media_type AS "mediaType", created_at AS "createdAt";
+            INSERT INTO watchlists (user_id, tmdb_movie_id)
+            VALUES ($1, $2)
+            ON CONFLICT (user_id, tmdb_movie_id) DO NOTHING
+            RETURNING id, user_id AS "userId", tmdb_movie_id AS "tmdbMovieId", created_at AS "createdAt";
         `;
-        const result = await pool.query(text, [userId, tmdbMovieId, mediaType]);
+        const result = await pool.query(text, [userId, tmdbMovieId]);
         return result.rows[0];
     },
 
     async findByUser(userId: number): Promise<WatchlistItem[]> {
         const text = `
-            SELECT id, user_id AS "userId", tmdb_movie_id AS "tmdbMovieId", media_type AS "mediaType", created_at AS "createdAt"
+            SELECT id, user_id AS "userId", tmdb_movie_id AS "tmdbMovieId", created_at AS "createdAt"
             FROM watchlists
             WHERE user_id = $1
             ORDER BY created_at DESC;
@@ -25,12 +24,12 @@ export const watchlistModel = {
         return result.rows;
     },
 
-    async remove(userId: number, tmdbMovieId: number, mediaType: WatchlistItem['mediaType']): Promise<boolean> {
+    async remove(userId: number, tmdbMovieId: number): Promise<boolean> {
         const text = `
             DELETE FROM watchlists
-            WHERE user_id = $1 AND tmdb_movie_id = $2 AND media_type = $3;
+            WHERE user_id = $1 AND tmdb_movie_id = $2;
         `;
-        const result = await pool.query(text, [userId, tmdbMovieId, mediaType]);
+        const result = await pool.query(text, [userId, tmdbMovieId]);
         return (result.rowCount ?? 0) > 0;
     }
 };

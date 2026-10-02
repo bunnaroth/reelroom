@@ -1,6 +1,5 @@
 import { reviewModel } from '../models/reviewModel.js';
 import { Review } from '../types/review.js';
-import type { MediaType } from '../types/movie.js';
 
 const validateMovieId = (tmdbMovieId: number): void => {
 	if (!Number.isInteger(tmdbMovieId) || tmdbMovieId <= 0) {
@@ -18,7 +17,6 @@ export const reviewService = {
 	async addReview(
 		userId: number,
 		tmdbMovieId: number,
-		mediaType: MediaType,
 		rating: number,
 		content: string
 	): Promise<Review> {
@@ -29,12 +27,12 @@ export const reviewService = {
 			throw new Error('A valid user ID is required');
 		}
 
-		return reviewModel.create(userId, tmdbMovieId, mediaType, rating, content.trim());
+		return reviewModel.create(userId, tmdbMovieId, rating, content.trim());
 	},
 
-	async getMovieReviews(tmdbMovieId: number, mediaType: MediaType): Promise<any[]> {
+	async getMovieReviews(tmdbMovieId: number): Promise<any[]> {
 		validateMovieId(tmdbMovieId);
-		return reviewModel.findByMovie(tmdbMovieId, mediaType);
+		return reviewModel.findByMovie(tmdbMovieId);
 	},
 
 	async deleteReview(userId: number, reviewId: number): Promise<boolean> {

@@ -1,4 +1,4 @@
-import type { AuthResponse, DiscoverCategory, DiscoverMoviePage, HomeMovieSections, Movie, Profile, Review, WatchlistItem } from '../types/movie'
+import type { AuthResponse, Movie, Profile, Review, WatchlistItem } from '../types/movie'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -15,11 +15,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const payload = await response.json().catch(() => null)
 
   if (!response.ok) {
-    if (response.status === 401 || (response.status === 403 && /invalid|expired token/i.test(payload?.error || ''))) {
-      localStorage.removeItem('movie-app-token')
-      localStorage.removeItem('movie-app-user')
-    }
-    throw new Error(payload?.error)
+    throw new Error(payload?.error || 'The request could not be completed')
   }
 
   return payload as T
@@ -27,9 +23,6 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   getPopularMovies: () => request<Movie[]>('/movies/popular'),
-  getHomeMovies: (signal?: AbortSignal) => request<HomeMovieSections>('/movies/home', { signal }),
-  getDiscoverMovies: (category: DiscoverCategory, page: number, signal?: AbortSignal) =>
-    request<DiscoverMoviePage>(`/movies/discover?category=${encodeURIComponent(category)}&page=${page}`, { signal }),
   searchMovies: (query: string) => request<Movie[]>(`/movies/search?query=${encodeURIComponent(query)}`),
 
   register: (username: string, email: string, password: string) =>
@@ -45,23 +38,30 @@ export const api = {
     }),
 
   getProfile: () => request<{ user: Profile }>('/auth/profile'),
-  getWatchlist: () => request<WatchlistItem[]>('/watchlist'),
+  getFavorites: () => request<Movie[]>('/favorites'),
 
-  addToWatchlist: (tmdbMovieId: number, mediaType: Movie['mediaType'] = 'movie') =>
-    request<{ data: WatchlistItem }>('/watchlist', {
+  toggleFavorite: (tmdbMovieId: number) =>
+    request<{ favorited: boolean }>('/favorites/toggle', {
       method: 'POST',
-      body: JSON.stringify({ tmdbMovieId, mediaType }),
+      body: JSON.stringify({ tmdbMovieId }),
     }),
 
-  removeFromWatchlist: (tmdbMovieId: number, mediaType: Movie['mediaType'] = 'movie') =>
-    request<{ message: string }>(`/watchlist/${tmdbMovieId}?mediaType=${encodeURIComponent(mediaType)}`, { method: 'DELETE' }),
+  getWatchlist: () => request<WatchlistItem[]>('/watchlist'),
 
-  getReviews: (movieId: number, mediaType: Movie['mediaType'] = 'movie') =>
-    request<Review[]>(`/reviews/movie/${movieId}?mediaType=${encodeURIComponent(mediaType)}`),
+  addToWatchlist: (tmdbMovieId: number) =>
+    request<{ data: WatchlistItem }>('/watchlist', {
+      method: 'POST',
+      body: JSON.stringify({ tmdbMovieId }),
+    }),
+
+  removeFromWatchlist: (tmdbMovieId: number) =>
+    request<{ message: string }>(`/watchlist/${tmdbMovieId}`, { method: 'DELETE' }),
+
+  getReviews: (movieId: number) => request<Review[]>(`/reviews/movie/${movieId}`),
   
-  createReview: (tmdbMovieId: number, rating: number, content: string, mediaType: Movie['mediaType'] = 'movie') =>
+  createReview: (tmdbMovieId: number, rating: number, content: string) =>
     request<{ data: Review }>('/reviews', {
       method: 'POST',
-      body: JSON.stringify({ tmdbMovieId, rating, content, mediaType }),
+      body: JSON.stringify({ tmdbMovieId, rating, content }),
     }),
 }

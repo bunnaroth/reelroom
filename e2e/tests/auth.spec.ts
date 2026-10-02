@@ -23,6 +23,14 @@ test.describe('authentication', () => {
       });
     });
 
+    await page.route('**/api/favorites*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    });
+
     await page.route('**/api/watchlist*', async route => {
       await route.fulfill({
         status: 200,

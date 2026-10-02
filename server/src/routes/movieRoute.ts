@@ -1,11 +1,7 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import { movieController } from '../controllers/movieController.js';
 import { tmdbService } from '../services/tmdbService.js';
 
 const router = Router();
-
-router.get('/home', movieController.home);
-router.get('/discover', movieController.discover);
 
 /**
  * @route   GET /api/movies/popular

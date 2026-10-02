@@ -8,7 +8,6 @@ interface AuthDialogProps {
     email: string
     password: string
   }
-  message?: string
   onClose: () => void
   onSubmit: (event: FormEvent) => void
   onToggleMode: () => void
@@ -19,7 +18,6 @@ export function AuthDialog({
   authOpen,
   registerMode,
   auth,
-  message,
   onClose,
   onSubmit,
   onToggleMode,
@@ -34,7 +32,6 @@ export function AuthDialog({
       <section className="auth-dialog" onClick={(event) => event.stopPropagation()}>
         <button className="close-button" onClick={onClose} aria-label="Close authentication">×</button>
         <h2>{registerMode ? 'Create your account' : 'Welcome back'}</h2>
-        {message && <p>{message}</p>}
         <form onSubmit={onSubmit}>
           {registerMode && (
             <input

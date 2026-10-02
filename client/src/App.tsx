@@ -1,44 +1,36 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import { useLocation } from 'react-router-dom'
-import { AppNavigation } from './components/AppNavigation'
 import { AuthFeature } from './features/auth/AuthFeature'
-import { DiscoverFeature } from './features/movies/DiscoverFeature'
-import { HomeFeature } from './features/movies/HomeFeature'
-import { WatchlistFeature } from './features/watchlist/WatchlistFeature'
+import { LibraryFeature } from './features/library/LibraryFeature'
 import { ReviewFeature } from './features/reviews/ReviewFeature'
 import { readStoredAuth, persistAuth } from './hooks/authStorage'
 import { api } from './services/api'
-import type { Movie, Review, WatchlistItem } from './types/movie'
+import type { Movie, Review } from './types/movie'
 import './index.css'
 
 function App() {
-  const location = useLocation()
   const [movies, setMovies] = useState<Movie[]>([])
-  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
+  const [favorites, setFavorites] = useState<Movie[]>([])
+  const [watchlist, setWatchlist] = useState<number[]>([])
   const [reviews, setReviews] = useState<Review[]>([])
   const [query, setQuery] = useState('')
-  const activeView = location.pathname === '/watchlist' ? 'watchlist' : 'discover'
+  const [activeView, setActiveView] = useState<'discover' | 'saved'>('discover')
   const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
-  const [publishingReview, setPublishingReview] = useState(false)
   const [authOpen, setAuthOpen] = useState(false)
   const [registerMode, setRegisterMode] = useState(false)
-  const [pendingSave, setPendingSave] = useState<Movie | null>(null)
   const [auth, setAuth] = useState({ username: '', email: '', password: '' })
   const [review, setReview] = useState({ rating: 5, content: '' })
 
   const isAuthenticated = Boolean(readStoredAuth().token)
 
   useEffect(() => {
-    if (location.pathname === '/watchlist') {
-      void loadPopular()
-    }
+    void loadPopular()
     if (isAuthenticated) {
-      void loadWatchlist()
+      void loadSaved()
     }
-  }, [isAuthenticated, location.pathname])
+  }, [isAuthenticated])
 
   async function loadPopular() {
     setLoading(true)
@@ -51,14 +43,13 @@ function App() {
     }
   }
 
-  async function loadWatchlist() {
+  async function loadSaved() {
     try {
-      const items = await api.getWatchlist()
-      setWatchlist(items)
-      return items
+      const [favoriteMovies, savedWatchlist] = await Promise.all([api.getFavorites(), api.getWatchlist()])
+      setFavorites(favoriteMovies)
+      setWatchlist(savedWatchlist.map((item) => item.tmdbMovieId))
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not load your watchlist')
-      return null
+      setNotice(error instanceof Error ? error.message : 'Could not load your library')
     }
   }
 
@@ -82,75 +73,53 @@ function App() {
   async function handleAuth(event: FormEvent) {
     event.preventDefault()
     try {
-      let token: string
-      let signedInUsername: string
       if (registerMode) {
         const result = await api.register(auth.username, auth.email, auth.password)
-        token = result.token
-        signedInUsername = result.user.username
+        persistAuth(result.token, result.user.username)
         setAuth((current) => ({ ...current, password: '' }))
         setRegisterMode(false)
-      } else {
-        const result = await api.login(auth.email, auth.password)
-        token = result.token
-        signedInUsername = result.user.username
+        setAuthOpen(false)
+        setNotice(`Welcome back, ${result.user.username}`)
+        await loadSaved()
+        return
       }
 
-      persistAuth(token, signedInUsername)
+      const result = await api.login(auth.email, auth.password)
+      persistAuth(result.token, result.user.username)
       setAuthOpen(false)
-      setNotice(`Welcome back, ${signedInUsername}`)
-      const watchlistItems = await loadWatchlist()
-      if (pendingSave) {
-        setPendingSave(null)
-        const mediaType = pendingSave.mediaType || 'movie'
-        const alreadySaved = watchlistItems?.some((item) =>
-          item.tmdbMovieId === pendingSave.id && (item.mediaType || 'movie') === mediaType)
-        if (alreadySaved) {
-          setNotice('Already in your watchlist')
-        } else {
-          await addWatchlist(pendingSave)
-        }
-      }
+      setNotice(`Welcome back, ${result.user.username}`)
+      await loadSaved()
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Authentication failed')
     }
   }
 
-  async function toggleWatchlist(movie: Movie) {
+  async function toggleFavorite(movie: Movie) {
     if (!isAuthenticated) {
-      setPendingSave(movie)
       setAuthOpen(true)
       return
     }
-
-    await saveWatchlist(movie)
-  }
-
-  async function saveWatchlist(movie: Movie, watchlistItems = watchlist) {
-    const mediaType = movie.mediaType || 'movie'
-    const isWatchlisted = watchlistItems.some((item) => item.tmdbMovieId === movie.id && (item.mediaType || 'movie') === mediaType)
     try {
-      if (isWatchlisted) {
-        await api.removeFromWatchlist(movie.id, mediaType)
-        setWatchlist((current) => current.filter((item) => !(item.tmdbMovieId === movie.id && (item.mediaType || 'movie') === mediaType)))
-        setNotice('Removed from watchlist')
-      } else {
-        await addWatchlist(movie)
-      }
+      const result = await api.toggleFavorite(movie.id)
+      setFavorites((current) => result.favorited ? [...current, movie] : current.filter((item) => item.id !== movie.id))
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : 'Could not update watchlist')
+      setNotice(error instanceof Error ? error.message : 'Could not update favorites')
     }
   }
 
-  async function addWatchlist(movie: Movie) {
-    const mediaType = movie.mediaType || 'movie'
+  async function toggleWatchlist(movie: Movie) {
+    if (!isAuthenticated) {
+      setAuthOpen(true)
+      return
+    }
     try {
-      const result = await api.addToWatchlist(movie.id, mediaType)
-      setWatchlist((current) => current.some((item) =>
-        item.tmdbMovieId === movie.id && (item.mediaType || 'movie') === mediaType)
-        ? current
-        : [...current, { ...result.data, movie }])
-      setNotice('Added to watchlist')
+      if (watchlist.includes(movie.id)) {
+        await api.removeFromWatchlist(movie.id)
+        setWatchlist((current) => current.filter((id) => id !== movie.id))
+      } else {
+        await api.addToWatchlist(movie.id)
+        setWatchlist((current) => [...current, movie.id])
+      }
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not update watchlist')
     }
@@ -159,7 +128,7 @@ function App() {
   async function openMovie(movie: Movie) {
     setSelectedMovie(movie)
     try {
-      setReviews(await api.getReviews(movie.id, movie.mediaType || 'movie'))
+      setReviews(await api.getReviews(movie.id))
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not load reviews')
     }
@@ -167,23 +136,17 @@ function App() {
 
   async function submitReview(event: FormEvent) {
     event.preventDefault()
-    if (publishingReview) {
-      return
-    }
     if (!selectedMovie || !isAuthenticated) {
       setAuthOpen(true)
       return
     }
-    setPublishingReview(true)
     try {
-      const result = await api.createReview(selectedMovie.id, review.rating, review.content, selectedMovie.mediaType || 'movie')
+      const result = await api.createReview(selectedMovie.id, review.rating, review.content)
       setReviews((current) => [result.data, ...current])
       setReview({ rating: 5, content: '' })
       setNotice('Review published')
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Could not publish review')
-    } finally {
-      setPublishingReview(false)
     }
   }
 
@@ -193,43 +156,24 @@ function App() {
     setAuth((current) => ({ ...current, [field]: value }))
   }
 
-  function closeAuth() {
-    setAuthOpen(false)
-    setPendingSave(null)
-  }
-
   return (
     <main className="app-shell">
-      <AppNavigation
+      <LibraryFeature
+        movies={movies}
+        favorites={favorites}
+        watchlist={watchlist}
+        loading={loading}
+        query={query}
+        activeView={activeView}
         username={username}
+        onSearch={handleSearch}
+        onQueryChange={(value) => setQuery(value)}
+        onOpenMovie={openMovie}
+        onToggleFavorite={toggleFavorite}
+        onToggleWatchlist={toggleWatchlist}
+        onChangeView={setActiveView}
         onOpenAuth={() => setAuthOpen(true)}
       />
-
-      {location.pathname === '/' ? (
-        <HomeFeature
-          watchlist={watchlist}
-          onOpenMovie={openMovie}
-          onToggleWatchlist={toggleWatchlist}
-        />
-      ) : location.pathname === '/discover' ? (
-        <DiscoverFeature
-          watchlist={watchlist}
-          onOpenMovie={openMovie}
-          onToggleWatchlist={toggleWatchlist}
-        />
-      ) : (
-        <WatchlistFeature
-          movies={movies}
-          watchlist={watchlist}
-          loading={loading}
-          query={query}
-          activeView={activeView}
-          onSearch={handleSearch}
-          onQueryChange={(value) => setQuery(value)}
-          onOpenMovie={openMovie}
-          onToggleWatchlist={toggleWatchlist}
-        />
-      )}
 
       {notice && <button className="notice" onClick={() => setNotice('')}>{notice} <span>×</span></button>}
 
@@ -238,7 +182,6 @@ function App() {
         reviews={reviews}
         isAuthenticated={isAuthenticated}
         review={review}
-        isSubmitting={publishingReview}
         onClose={() => setSelectedMovie(null)}
         onRatingChange={(value) => setReview((current) => ({ ...current, rating: value }))}
         onReviewChange={(value) => setReview((current) => ({ ...current, content: value }))}
@@ -249,8 +192,7 @@ function App() {
         authOpen={authOpen}
         registerMode={registerMode}
         auth={auth}
-        message={pendingSave ? 'Sign in to save this title. It will be added after you sign in.' : undefined}
-        onClose={closeAuth}
+        onClose={() => setAuthOpen(false)}
         onSubmit={handleAuth}
         onToggleMode={() => setRegisterMode((current) => !current)}
         onChange={handleAuthFieldChange}
