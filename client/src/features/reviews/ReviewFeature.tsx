@@ -7,6 +7,7 @@ interface ReviewFeatureProps {
   reviews: Review[]
   isAuthenticated: boolean
   review: { rating: number; content: string }
+  isSubmitting: boolean
   onClose: () => void
   onRatingChange: (value: number) => void
   onReviewChange: (value: string) => void
@@ -18,6 +19,7 @@ export function ReviewFeature({
   reviews,
   isAuthenticated,
   review,
+  isSubmitting,
   onClose,
   onRatingChange,
   onReviewChange,
@@ -33,6 +35,7 @@ export function ReviewFeature({
       reviews={reviews}
       isAuthenticated={isAuthenticated}
       review={review}
+      isSubmitting={isSubmitting}
       onClose={onClose}
       onRatingChange={onRatingChange}
       onReviewChange={onReviewChange}

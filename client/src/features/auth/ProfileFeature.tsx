@@ -28,12 +28,20 @@ export function ProfileFeature() {
   }
 
   return (
-    <main className="profile-page">
+    <main
+      className="profile-page"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          navigate('/')
+        }
+      }}
+    >
       <header className="topbar">
         <a className="brand" href="/">REEL<span>ROOM</span></a>
         <button className="text-button" onClick={() => navigate('/')}>Back</button>
       </header>
-      <section className="profile-card">
+      <section className="profile-card" role="dialog" aria-modal="true" aria-labelledby="profile-heading">
+        <h1 id="profile-heading">Your profile</h1>
         {error ? <p className="empty-state">{error}</p> : !profile ? <p className="empty-state">Loading your profile...</p> : (
           <div className="profile-details">
             <div className="profile-avatar">{profile.username.charAt(0).toUpperCase()}</div>

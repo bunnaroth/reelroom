@@ -6,6 +6,7 @@ interface MovieDialogProps {
   reviews: Review[]
   isAuthenticated: boolean
   review: { rating: number; content: string }
+  isSubmitting: boolean
   onClose: () => void
   onRatingChange: (value: number) => void
   onReviewChange: (value: string) => void
@@ -17,6 +18,7 @@ export function MovieDialog({
   reviews,
   isAuthenticated,
   review,
+  isSubmitting,
   onClose,
   onRatingChange,
   onReviewChange,
@@ -25,11 +27,13 @@ export function MovieDialog({
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <section className="movie-dialog" onClick={(event) => event.stopPropagation()}>
-        <button className="close-button" onClick={onClose} aria-label="Close movie details">×</button>
+        <button className="close-button" onClick={onClose} aria-label="Close title details">×</button>
         <div className="dialog-head">
-          {selectedMovie.backdropPath && <img src={selectedMovie.backdropPath} alt="" />}
+          {selectedMovie.backdropPath
+            ? <img src={selectedMovie.backdropPath} alt="" />
+            : <div className="dialog-backdrop-placeholder" aria-hidden="true" />}
           <div>
-            <p className="eyebrow">{selectedMovie.releaseDate?.slice(0, 4)}</p>
+            <p className="eyebrow">{selectedMovie.mediaType === 'tv' ? 'TV SERIES' : 'FILM'} · {selectedMovie.releaseDate?.slice(0, 4)}</p>
             <h2>{selectedMovie.title}</h2>
             <p>{selectedMovie.overview || 'No synopsis available.'}</p>
             <div className="rating-line">
@@ -38,12 +42,7 @@ export function MovieDialog({
           </div>
         </div>
         <div className="review-section">
-          <div className="section-heading">
-            <div>
               <p className="eyebrow">THE AUDIENCE</p>
-              <h3>{reviews.length} reviews</h3>
-            </div>
-          </div>
           {reviews.map((item) => (
             <div className="review-item" key={item.id}>
               <strong>{item.username}</strong>
@@ -53,23 +52,30 @@ export function MovieDialog({
           ))}
           {isAuthenticated && (
             <form className="review-form" onSubmit={onSubmitReview}>
-              <label>
-                Leave your rating
-                <select value={review.rating} onChange={(event) => onRatingChange(Number(event.target.value))}>
-                  {[5, 4, 3, 2, 1].map((rating) => (
-                    <option key={rating} value={rating}>
-                      {rating} stars
-                    </option>
+              <fieldset className="review-rating">
+                <legend>Choose your rating</legend>
+                <div className="rating-stars" role="group" aria-label="Your rating">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      type="button"
+                      aria-pressed={review.rating === rating}
+                      aria-label={`${rating} ${rating === 1 ? 'star' : 'stars'}`}
+                      className={rating <= review.rating ? 'rating-star selected' : 'rating-star'}
+                      onClick={() => onRatingChange(rating)}
+                    >
+                      ★
+                    </button>
                   ))}
-                </select>
-              </label>
+                </div>
+              </fieldset>
               <textarea
                 value={review.content}
                 onChange={(event) => onReviewChange(event.target.value)}
                 placeholder="What stayed with you?"
               />
-              <button type="submit" className="primary-button">
-                Publish review
+              <button type="submit" className="primary-button" disabled={isSubmitting}>
+                {isSubmitting ? 'Publishing...' : 'Publish review'}
               </button>
             </form>
           )}

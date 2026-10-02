@@ -1,5 +1,4 @@
 export interface Movie { 
-    adult: boolean; 
     backdrop_path: string | null; 
     id: number;
     title: string; 
@@ -16,8 +15,13 @@ export interface Movie {
     vote_count: number; 
 }
 
+export type MediaType = 'movie' | 'tv';
+
+export const isMediaType = (value: unknown): value is MediaType => value === 'movie' || value === 'tv';
+
 export interface MovieDTO {
     id: number;
+    mediaType?: MediaType;
     title: string;
     overview: string | null;
     posterPath: string | null;
@@ -27,4 +31,18 @@ export interface MovieDTO {
     voteCount: number;
     popularity: number;
     genreIds: number[];
+}
+
+export interface MoviePageDTO {
+    movies: MovieDTO[];
+    page: number;
+    totalPages: number;
+}
+
+export interface HomeMovieSectionsDTO {
+    popular: MovieDTO[];
+    animation: MovieDTO[];
+    hollywood: MovieDTO[];
+    kDrama: MovieDTO[];
+    cDrama: MovieDTO[];
 }

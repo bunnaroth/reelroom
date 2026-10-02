@@ -22,7 +22,7 @@ export const ratingService = {
 		validateMovieId(tmdbMovieId);
 		validateRating(rating);
 
-		const review = await reviewModel.create(userId, tmdbMovieId, rating, '');
+		const review = await reviewModel.create(userId, tmdbMovieId, 'movie', rating, '');
 		return {
 			id: review.id,
 			user_id: review.userId,
@@ -36,7 +36,7 @@ export const ratingService = {
 	async getMovieRating(tmdbMovieId: number): Promise<{ averageRating: number; totalRatings: number }> {
 		validateMovieId(tmdbMovieId);
 
-		const reviews = await reviewModel.findByMovie(tmdbMovieId);
+		const reviews = await reviewModel.findByMovie(tmdbMovieId, 'movie');
 		const totalRatings = reviews.length;
 		const averageRating = totalRatings === 0
 			? 0

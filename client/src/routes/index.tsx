@@ -8,6 +8,14 @@ export const router = createBrowserRouter([
     element: <App />,
   },
   {
+    path: '/discover',
+    element: <App />,
+  },
+  {
+    path: '/watchlist',
+    element: <App />,
+  },
+  {
     path: '/profile',
     element: <ProfileFeature />,
   },
