@@ -1,12 +1,17 @@
-import pg from "pg"; 
+import 'dotenv/config';
+import pg from 'pg';
 
-const {Pool} = pg; 
+const { Pool } = pg;
+const connectionString = process.env.DATABASE_URL;
 
-export const pool = new Pool({ 
-    host: process.env.DB_HOST, 
-    port: Number(process.env.DB_PORT), 
-    database: process.env.DB_NAME, 
-    user: process.env.DB_USER, 
-    password: process.env.DB_PASSWORD,
-}); 
+if (!connectionString) {
+    throw new Error('DATABASE_URL is not set');
+}
+
+export const pool = new Pool({
+    connectionString,
+    ssl: {
+        rejectUnauthorized: false,
+    },
+});
 
