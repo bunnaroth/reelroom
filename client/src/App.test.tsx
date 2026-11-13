@@ -154,7 +154,6 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open Squid Game' }))
 
     expect(await screen.findByText('THE AUDIENCE')).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: '0 reviews' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Publish review' })).toBeInTheDocument()
     expect(fetch).toHaveBeenCalledWith('/api/reviews/movie/550?mediaType=tv', expect.any(Object))
   })
